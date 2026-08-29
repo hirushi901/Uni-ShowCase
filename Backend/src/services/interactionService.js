@@ -4,10 +4,17 @@ const Project = require('../models/Project');
 const User = require('../models/User');
 const eventEmitter = require('../events/emitters');
 
+const canAccessProject = (project, user) => {
+  if (project.isPublic || user.role === 'Admin') return true;
+  const projectOwnerId = project.studentId._id || project.studentId;
+  return projectOwnerId.toString() === (user._id || user.id).toString();
+};
+
 class InteractionService {
   async toggleLike(projectId, user) {
     const project = await Project.findById(projectId);
     if (!project) throw new Error('Project not found');
+    if (!canAccessProject(project, user)) throw new Error('Access denied: Private project');
 
     const userId = user._id || user.id;
     const existingLike = await Like.findOne({ projectId, userId });
@@ -27,6 +34,10 @@ class InteractionService {
   }
 
   async getLikesForProject(projectId, user) {
+    const project = await Project.findById(projectId);
+    if (!project) throw new Error('Project not found');
+    if (!canAccessProject(project, user)) throw new Error('Access denied: Private project');
+
     const totalLikes = await Like.countDocuments({ projectId });
     const userId = user._id || user.id;
     const userLiked = !!(await Like.findOne({ projectId, userId }));

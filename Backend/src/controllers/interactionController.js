@@ -8,7 +8,8 @@ const toggleLike = async (req, res) => {
       ...result
     });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    const statusCode = error.message.includes('Access denied') ? 403 : 400;
+    return res.status(statusCode).json({ message: error.message });
   }
 };
 
@@ -17,7 +18,8 @@ const getLikesForProject = async (req, res) => {
     const result = await interactionService.getLikesForProject(req.params.id, req.user);
     return res.status(200).json(result);
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    const statusCode = error.message.includes('Access denied') ? 403 : 400;
+    return res.status(statusCode).json({ message: error.message });
   }
 };
 
