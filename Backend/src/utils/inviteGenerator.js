@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_net_centric_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const generateInviteToken = (role, email = '') => {
   return jwt.sign({ role, email, type: 'INVITE' }, JWT_SECRET, { expiresIn: '7d' });

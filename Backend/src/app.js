@@ -4,6 +4,13 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+// JWTs authenticate users and authorize every protected API route.  Never use
+// a source-controlled fallback: a missing secret must stop the service rather
+// than make token signing predictable.
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length < 32) {
+  throw new Error('JWT_SECRET must be configured and contain at least 32 characters');
+}
+
 const connectDB = require('./config/db');
 const initEventListeners = require('./events/listeners');
 const { initSocketManager, registerSocket, removeSocket } = require('./socket/socketManager');
