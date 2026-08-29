@@ -1,6 +1,7 @@
 const Project = require('../models/Project');
 const eventEmitter = require('../events/emitters');
 const { uploadBufferToCloudinary } = require('../utils/cloudinary');
+const { createLiteralSearchRegex } = require('../utils/search');
 
 const validateExternalUrl = (value, fieldName) => {
   if (value === undefined || value === null || value === '') return '';
@@ -72,16 +73,29 @@ class ProjectService {
       query.isPublic = true;
     }
 
-    if (search) {
+    const searchRegex = search === undefined ? null : createLiteralSearchRegex(search, 'Search');
+    if (searchRegex) {
       query.$and = query.$and || [];
       query.$and.push({
-        $or: [{ title: { $regex: search, $options: 'i' } }, { description: { $regex: search, $options: 'i' } }]
+        $or: [{ title: searchRegex }, { description: searchRegex }]
       });
     }
 
     if (technologies) {
-      const techArray = Array.isArray(technologies) ? technologies : technologies.split(',').map(t => t.trim());
-      query.technologiesUsed = { $in: techArray.map(t => new RegExp(t, 'i')) };
+      const techArray = Array.isArray(technologies)
+        ? technologies
+        : typeof technologies === 'string'
+          ? technologies.split(',')
+          : (() => { throw new Error('Technologies must be text'); })();
+
+      if (techArray.length > 10) throw new Error('A maximum of 10 technologies may be searched');
+      const technologyRegexes = techArray
+        .map((technology) => createLiteralSearchRegex(technology, 'Technology'))
+        .filter(Boolean);
+
+      if (technologyRegexes.length > 0) {
+        query.technologiesUsed = { $in: technologyRegexes };
+      }
     }
 
     // Followed only filter (for Recruiters)

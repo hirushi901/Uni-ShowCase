@@ -1,15 +1,17 @@
 const User = require('../models/User');
 const Project = require('../models/Project');
+const { createLiteralSearchRegex } = require('../utils/search');
 
 const getAllUsers = async (req, res) => {
   try {
     const { search, role, isVerified, page, limit, followedOnly } = req.query;
     const query = {};
 
-    if (search) {
+    const searchRegex = search === undefined ? null : createLiteralSearchRegex(search, 'Search');
+    if (searchRegex) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { name: searchRegex },
+        { email: searchRegex }
       ];
     }
 
