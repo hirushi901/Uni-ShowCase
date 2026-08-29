@@ -2,6 +2,21 @@ const Project = require('../models/Project');
 const eventEmitter = require('../events/emitters');
 const { uploadBufferToCloudinary } = require('../utils/cloudinary');
 
+const validateExternalUrl = (value, fieldName) => {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string') throw new Error(`${fieldName} must be a URL`);
+
+  try {
+    const url = new URL(value.trim());
+    if (!['https:', 'http:'].includes(url.protocol)) {
+      throw new Error('Unsupported URL scheme');
+    }
+    return url.href;
+  } catch (error) {
+    throw new Error(`${fieldName} must be a valid HTTP(S) URL`);
+  }
+};
+
 class ProjectService {
   async createProject(studentId, projectData, files, user) {
     let coverImage = '';
@@ -30,8 +45,8 @@ class ProjectService {
       technologiesUsed: technologiesUsed || [],
       coverImage: coverImage || projectData.coverImage || '',
       additionalImages: additionalImages.length > 0 ? additionalImages : (projectData.additionalImages || []),
-      demoUrl: projectData.demoUrl || '',
-      gitRepoUrl: projectData.gitRepoUrl || '',
+      demoUrl: validateExternalUrl(projectData.demoUrl, 'Demo URL'),
+      gitRepoUrl: validateExternalUrl(projectData.gitRepoUrl, 'Git repository URL'),
       // Project approval is a privileged operation. Never accept visibility
       // from a student-controlled create request.
       isPublic: false
@@ -176,8 +191,12 @@ class ProjectService {
     project.technologiesUsed = technologiesUsed !== undefined ? technologiesUsed : project.technologiesUsed;
     project.coverImage = coverImage;
     project.additionalImages = additionalImages;
-    project.demoUrl = updateData.demoUrl !== undefined ? updateData.demoUrl : project.demoUrl;
-    project.gitRepoUrl = updateData.gitRepoUrl !== undefined ? updateData.gitRepoUrl : project.gitRepoUrl;
+    project.demoUrl = updateData.demoUrl !== undefined
+      ? validateExternalUrl(updateData.demoUrl, 'Demo URL')
+      : project.demoUrl;
+    project.gitRepoUrl = updateData.gitRepoUrl !== undefined
+      ? validateExternalUrl(updateData.gitRepoUrl, 'Git repository URL')
+      : project.gitRepoUrl;
     // Visibility changes are handled only by updateVisibility, which requires
     // the Recruiter or Admin role. Ignore any isPublic value in normal edits.
 

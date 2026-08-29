@@ -21,6 +21,7 @@ import {
   Globe2
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import { safeExternalUrl } from '../utils/safeUrl';
 
 // Custom GitHub icon component since Lucide v1.0+ removed brand icons
 const Github = (props) => (
@@ -253,6 +254,8 @@ const ProjectDetail = () => {
     ? `${BASE_URL}${project.studentId.profilePicture}`
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=random&color=fff`;
   const gradientClass = gradients[authorName.length % gradients.length];
+  const demoUrl = safeExternalUrl(project.demoUrl);
+  const gitRepoUrl = safeExternalUrl(project.gitRepoUrl);
 
   return (
     <>
@@ -495,7 +498,7 @@ const ProjectDetail = () => {
             )}
 
             {/* Links */}
-            {(project.demoUrl || project.gitRepoUrl) && (
+            {(demoUrl || gitRepoUrl) && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -504,9 +507,9 @@ const ProjectDetail = () => {
               >
                 <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">Links</h2>
                 <div className="flex flex-wrap gap-3">
-                  {project.demoUrl && (
+                  {demoUrl && (
                     <a
-                      href={project.demoUrl}
+                      href={demoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       id="demo-link"
@@ -516,9 +519,9 @@ const ProjectDetail = () => {
                       Live Demo
                     </a>
                   )}
-                  {project.gitRepoUrl && (
+                  {gitRepoUrl && (
                     <a
-                      href={project.gitRepoUrl}
+                      href={gitRepoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       id="git-link"

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Heart, ExternalLink, Edit3, Trash2, Globe, Clock, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { safeExternalUrl } from '../utils/safeUrl';
 
 const defaultGradients = [
   "from-blue-500/20 to-purple-500/20",
@@ -45,6 +46,7 @@ const ProjectCard = ({
 
   // Technologies rendering
   const techList = project.technologies || project.technologiesUsed || [];
+  const demoUrl = safeExternalUrl(project.demoUrl || project.demoLink);
 
   const handleCardClick = () => {
     navigate(`/projects/${project.id || project._id}`);
@@ -115,9 +117,9 @@ const ProjectCard = ({
           <h3 className={`text-xl font-bold text-white ${hoverTextClass} transition-colors line-clamp-1 pr-4`}>
             {project.title}
           </h3>
-          {(project.demoUrl || project.demoLink) && (
+          {demoUrl && (
             <a
-              href={project.demoUrl || project.demoLink}
+              href={demoUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -161,7 +163,7 @@ const ProjectCard = ({
           ) : (
             // Owner view demo link
             <a
-              href={project.demoUrl || project.demoLink || '#'}
+              href={demoUrl || '#'}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}

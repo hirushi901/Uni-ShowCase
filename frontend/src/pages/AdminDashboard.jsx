@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
+import { safeExternalUrl } from '../utils/safeUrl';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('projects');
@@ -459,8 +460,8 @@ const AdminDashboard = () => {
                             >
                               <Check className="w-4 h-4" /> Publish / Make Public
                             </Button>
-                            {project.demoUrl && (
-                              <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
+                            {safeExternalUrl(project.demoUrl) && (
+                              <a href={safeExternalUrl(project.demoUrl)} target="_blank" rel="noopener noreferrer">
                                 <Button 
                                   variant="secondary"
                                   className="px-6 py-2.5 text-sm rounded-xl!"
