@@ -2,6 +2,7 @@ const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // JWTs authenticate users and authorize every protected API route.  Never use
@@ -12,6 +13,7 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length < 32) {
 }
 
 const connectDB = require('./config/db');
+const User = require('./models/User');
 const initEventListeners = require('./events/listeners');
 const { initSocketManager, registerSocket, removeSocket } = require('./socket/socketManager');
 const { Server } = require('socket.io');
@@ -74,18 +76,30 @@ const io = new Server(server, {
 
 initSocketManager(io);
 
-io.on('connection', (socket) => {
-  const socketManager = require('./socket/socketManager');
+// Authenticate the socket before it is connected. Its identity comes from the
+// verified JWT, not from a client-controlled event payload.
+io.use(async (socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (typeof token !== 'string' || !token) {
+    return next(new Error('Authentication required'));
+  }
 
-  // Client emits 'register' with their userId right after connecting
-  socket.on('register', (userId) => {
-    if (userId) {
-      registerSocket(userId, socket.id);
-      // Store userId on socket for fast disconnect lookup
-      socket.userId = userId.toString();
-      console.log(`[Socket] User ${userId} registered → socket ${socket.id}`);
-    }
-  });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('_id');
+    if (!user) return next(new Error('Authentication failed'));
+
+    socket.userId = user._id.toString();
+    return next();
+  } catch (error) {
+    return next(new Error('Authentication failed'));
+  }
+});
+
+io.on('connection', (socket) => {
+  const userId = socket.userId;
+  registerSocket(userId, socket.id);
+  console.log(`[Socket] Authenticated user ${userId} connected → socket ${socket.id}`);
 
   socket.on('disconnect', () => {
     if (socket.userId) {
