@@ -32,7 +32,9 @@ class ProjectService {
       additionalImages: additionalImages.length > 0 ? additionalImages : (projectData.additionalImages || []),
       demoUrl: projectData.demoUrl || '',
       gitRepoUrl: projectData.gitRepoUrl || '',
-      isPublic: projectData.isPublic === 'true' || projectData.isPublic === true
+      // Project approval is a privileged operation. Never accept visibility
+      // from a student-controlled create request.
+      isPublic: false
     });
 
     await project.populate('studentId', 'name email role');
@@ -176,7 +178,8 @@ class ProjectService {
     project.additionalImages = additionalImages;
     project.demoUrl = updateData.demoUrl !== undefined ? updateData.demoUrl : project.demoUrl;
     project.gitRepoUrl = updateData.gitRepoUrl !== undefined ? updateData.gitRepoUrl : project.gitRepoUrl;
-    project.isPublic = updateData.isPublic !== undefined ? (updateData.isPublic === 'true' || updateData.isPublic === true) : project.isPublic;
+    // Visibility changes are handled only by updateVisibility, which requires
+    // the Recruiter or Admin role. Ignore any isPublic value in normal edits.
 
     await project.save();
     return project;
