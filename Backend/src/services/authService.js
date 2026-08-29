@@ -49,7 +49,12 @@ class AuthService {
   }
 
   async processUserRegistration({ googleId, name, email, profilePicture, inviteToken, mockRole }) {
-    let user = await User.findOne({ email });
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    if (!normalizedEmail) {
+      throw new Error('A verified Google email address is required');
+    }
+
+    let user = await User.findOne({ email: normalizedEmail });
     if (user) {
       // If inviteToken is passed but user already exists, they are trying to register with a used account
       if (inviteToken) {
@@ -66,25 +71,62 @@ class AuthService {
 
     // New user registration: requires inviteToken validation or mockRole in dev
     let role = 'Student';
+    let consumedInvitation = null;
     if (inviteToken) {
       const decodedInvite = this.validateInvite(inviteToken);
-      role = decodedInvite.role || 'Student';
+      const invitedEmail = typeof decodedInvite.email === 'string'
+        ? decodedInvite.email.trim().toLowerCase()
+        : '';
+
+      if (invitedEmail !== normalizedEmail) {
+        throw new Error('This invitation was issued for a different email address');
+      }
+
       const Invitation = require('../models/Invitation');
-      await Invitation.findOneAndUpdate({ token: inviteToken }, { status: 'Completed' });
+      // Atomically consume a pending invitation. A second request using the
+      // same token cannot match once this update succeeds.
+      consumedInvitation = await Invitation.findOneAndUpdate(
+        {
+          token: inviteToken,
+          email: normalizedEmail,
+          role: decodedInvite.role,
+          status: 'Pending'
+        },
+        { $set: { status: 'Completed' } },
+        { new: true }
+      );
+
+      if (!consumedInvitation) {
+        throw new Error('Invitation is invalid, expired, already used, or does not match this account');
+      }
+
+      role = consumedInvitation.role;
     } else if (mockRole) {
       role = mockRole;
     } else {
       throw new Error('Account not found. You must be invited by an Administrator to register.');
     }
 
-    user = await User.create({
-      googleId,
-      name,
-      email,
-      profilePicture,
-      role,
-      isVerified: true
-    });
+    try {
+      user = await User.create({
+        googleId,
+        name,
+        email: normalizedEmail,
+        profilePicture,
+        role,
+        isVerified: true
+      });
+    } catch (error) {
+      // Do not permanently consume an invitation when account creation fails.
+      if (consumedInvitation) {
+        const Invitation = require('../models/Invitation');
+        await Invitation.updateOne(
+          { _id: consumedInvitation._id, status: 'Completed' },
+          { $set: { status: 'Pending' } }
+        );
+      }
+      throw error;
+    }
 
     return { user, authToken: generateUserToken(user) };
   }
